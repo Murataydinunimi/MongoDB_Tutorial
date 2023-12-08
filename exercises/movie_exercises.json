@@ -1,0 +1,184 @@
+
+//Retrieve the movies of 2010 with a length equal to 120.
+
+db.movie_collection.find({ 
+"year":"2012",
+"length":110
+ })
+
+//Retrieve the movies of 2010 with a length greater than 120.
+
+db.movie_collection.find({
+"year" : "2010",
+"length": {"$gt":120}
+})
+//greater than or equal to and return title, year, length
+
+db.movie_collection.find({
+"year" : "2010",
+"length": {"$gte":120}
+},
+{ "year":1,
+   "_id":0,
+   "length":1,
+   "title":1})
+
+//count the result of the query
+
+db.movie_collection.find({
+"year" : "2010",
+"length": {"$gte":120}
+},
+{ "year":1,
+   "_id":0,
+   "length":1,
+   "title":1,}).count();
+
+//sort the result according to the title.
+
+db.movie_collection.find({
+"year" : "2010",
+"length": {"$gte":120}
+},
+{ "year":1,
+   "_id":0,
+   "length":1,
+   "title":1,}).sort({"title":1}); // 1 for ascending, -1 is for descending.
+
+//when the title is the same, sort also by length
+db.movie_collection.find(
+  {
+    "year": "2010",
+    "length": { "$gte": 120 }
+  },
+  {"year": 1,
+    "_id": 0,
+    "length": 1,
+    "title": 1}).sort({ "title": 1,"length": 1});
+
+
+//retrieve the title of movies where Leonardo Di Caprio is an actor
+
+db.movie_collection.find({
+"crew.role":"actor",
+"crew.give_name":"Leonardo Di Caprio"
+},
+{"title":1,
+	"_id":0,
+	"crew.give_name":1})
+
+// use regex
+
+db.movie_collection.find({
+"crew.role":"actor",
+"crew.give_name":{"$regex":/Caprio./i}
+},
+{"title":1,
+	"_id":0,
+	"crew.give_name":1})
+
+
+//Retrieve movies with length between 60 and 120. Sort the result by title ASC order.
+
+db.movie_collection.find({
+	"length":{"$gte":60},
+	"length":{"$lte":120},
+
+},
+{"_id":0,
+	"title":1,
+	"length":1}).sort({"title":1});
+
+//Retrieve the movies that have been rated on OCT 31st 2017
+
+db.movie_collection.find({
+    "ratings.rating_date": new Date("2017-10-31")});
+
+//Retrieve the movies  that have been rated in Nov 2017 where Leonardi Di caprio is a producer.
+
+db.movie_collection.find({
+        "ratings.rating_date":{
+            "$gte": new Date("2017-11-01"),
+            "$lte": new Date("2017-11-30")}, 
+    
+        "crew.give_name" : { "$regex": /caprio/i },
+        "crew.role":"producer"
+    })
+
+    db.movie_collection.find({
+        "$and":[
+         {"crew.give_name":{"$regex":/caprio/i}},
+         {"crew.role":"producer"},
+         {"ratings.rating_date":{
+          "$gte": new Date("2017-11-01"),
+          "$lte": new Date("2017-11-30")
+         }
+       
+        },
+         ]
+       
+       },
+       
+       { "_id":0,
+         "title":1,
+         "crew.role":1,
+         "crew.give_name.$":1, //It means do not show all the crew properties. 
+         // Because keep in mind that we are going to work on documents. 
+         // A document is returned if the conditions are satisfied. 
+         // If we do not put here the dollar sign, for any document in the result
+         // all the items of the crew are shown. 
+         // However in this case, wE just want to have leaonardo di caprio. 
+         // We do not want to get all the crew name.
+         "ratings.rating_date":1 
+       }
+       
+       );
+
+//Retrieve the number of movies from 2010
+
+db.movie_collection.aggregate([
+        {"$match":{"year":"2010"}},
+        {"$group": {"_id":"$year","number of movies in 2010":{"$sum":1}} } 
+        ])
+
+//Retrieve the number of movies by year
+
+db.movie_collection.aggregate([
+
+    {"$group":{"_id":{"year":"$year"},"number of movies":{"$sum":1} } }
+    
+    ])
+
+//Retrieve the number of movies with leonardo Di caprio
+db.movie_collection.aggregate([
+    {"$match":{"crew.give_name":"Leonardo DiCaprio"}},
+    {"$project":{"_id":1, "considered actor":"Leonardo DiCaprio"}},
+    {"$group":{"_id":"$considered actor","DiCaprio movies":{"$sum":1}}}
+    ])
+
+//retrieve the number of persons in the crew of each movie of 2010 and add the movie title in the result 
+
+db.movie_collection.aggregate([
+    {"$match":{"year":"2010"}},
+    {"$unwind":"$crew"},
+    {"$group":{"_id":{"m_id":"$movie_id","title":"$title"},"number of crew persons":{"$sum":1}}}
+    ])
+    
+//retrieve the average number of persons in the crew of each movie.
+
+db.movie_collection.aggregate([
+    {"$project": {"movie_id":1,"title":1,"n_person_crew":{"$size":"$crew"}}}, 
+    {"$group":{"_id":null, "avg number of persons ":{"$avg":"$n_person_crew"}}}
+        ])
+
+
+//retrieve the actors who participated in more than 10 movies.
+
+
+db.movie_collection.aggregate([
+    {"$unwind":"$crew"}, 
+    {"$match":{"crew.role":"actor"}}, 
+    {"$group":{"_id":{"p_id":"$crew.person_id","p_name":"$crew.give_name"}, "number of movies" : {"$sum":1}}},
+    {"$match": {"number of movies" : {"$gt":10}} }, 
+    {"$sort":{"number of movies":1}} //sort the result in ascending order.
+    ])
