@@ -5,7 +5,7 @@ services:
     image: mongo
     volumes: 
       - ./data/movie.json:/movie.json
-      - ./data/orders.json:/orders.json
+      - ./data/instacart_orders.json:/instacart_orders.json
     ports:
       - "27017:27017"
     environment:
